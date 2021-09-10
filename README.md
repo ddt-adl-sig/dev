@@ -1,2 +1,4 @@
 # dev
-Partage de connaissances en développements
+Partage de connaissances en développements  
+
+### Voir l'onglet *Discussions*
