@@ -1,0 +1,127 @@
+<!doctype html><html>
+<head>
+	<title>Isochrones</title>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<link rel="stylesheet" href="./resources/ol.css">
+	<link rel="stylesheet" href="resources/fontawesome-all.min.css">
+	<link rel="stylesheet" href="./resources/ol3-layerswitcher.css">
+	<link rel="stylesheet" href="./resources/qgis2web.css">
+	<style>
+		.search-layer {
+			top: 100px;
+			left: .5em;
+		}
+		.ol-touch .search-layer {
+			top: 130px;
+		}
+		html, body {	background-color: #ffffff; height:initial	}
+		.ol-control button {
+				background-color: #f8f8f8 !important;
+				color: #000000 !important;
+				border-radius: 0px !important;
+		}
+		.ol-zoom, .geolocate, .gcd-gl-control .ol-control {
+				background-color: rgba(255,255,255,.4) !important;
+				padding: 3px !important;
+		}
+		.ol-scale-line {
+				background: none !important;
+		}
+		.ol-scale-line-inner {
+				border: 2px solid #f8f8f8 !important;
+				border-top: none !important;
+				background: rgba(255, 255, 255, 0.5) !important;
+				color: black !important;
+		}
+		.tooltip {
+			position: relative;
+			background: rgba(0, 0, 0, 0.5);
+			border-radius: 4px;
+			color: white;
+			padding: 4px 8px;
+			opacity: 0.7;
+			white-space: nowrap;
+		}
+		.tooltip-measure {
+			opacity: 1;
+			font-weight: bold;
+		}
+		.tooltip-static {
+			background-color: #ffcc33;
+			color: black;
+			border: 1px solid white;
+		}
+		.tooltip-measure:before,
+		.tooltip-static:before {
+			border-top: 6px solid rgba(0, 0, 0, 0.5);
+			border-right: 6px solid transparent;
+			border-left: 6px solid transparent;
+			content: "";
+			position: absolute;
+			bottom: -6px;
+			margin-left: -7px;
+			left: 50%;
+		}
+		.tooltip-static:before {
+			border-top-color: #ffcc33;
+		}
+		.measure-control {
+			top: 65px;
+			left: .5em;
+		}
+		.ol-touch .measure-control {
+			top: 80px;
+		}
+	</style>
+</head>
+<body style="padding:0px 10px"> 
+	<center>
+		<h3 style="margin:5px">Calcul d'isochrones routiers</h3>
+		<p style="margin:5px">Cliquer sur le bouton <b>[isochrone]</b> pour activer la fonction ;
+			indiquer le temps de trajet (minutes) ;
+			puis cliquer dans la carte sur le point de départ de l'isochrone à calculer
+		</p>
+	</center>
+	
+	<div id="map" style="width:100%; height:500px">
+		<div id="popup" class="ol-popup">
+			<a href="#" id="popup-closer" class="ol-popup-closer"></a>
+			<div id="popup-content"></div>
+		</div>
+	</div>
+	<script src="resources/qgis2web_expressions.js"></script>
+	<script src="resources/polyfills.js"></script>
+	<script src="./resources/functions.js"></script>
+	<script src="./resources/proj4.js"></script>
+	<script src="./resources/ol.js"></script>
+	<script src="./resources/ol3-layerswitcher.js"></script>
+	<script src="./layers/layers.js"></script> 
+	<script src="./resources/qgis2web.js"></script>
+	<script src="./resources/Autolinker.min.js"></script>
+
+	<script src="./resources/isochrones.js"></script>
+	
+<h3>Guide : calculer des isochrones dans une carte Qgis2web Openlayers</h3>
+<ol>
+	<li>Dans QGIS, créer une carte, puis lancer l'extension <b>qgis2web</b></li>
+	<li>exporter la carte en mode Web avec l'option <b>OpenLayers</b>	(en bas à gauche de qgis2web) </li>
+	<li>Ouvrir le dossier créé par qgis2web et éditer le fichier <b>index.html</b>
+		<ul>
+			<li>à la fin du fichier, juste avant la balise <b>&lt;/body&gt;</b> ajouter la ligne suivante :<br>
+				<b>&lt;script src=&quot;./resources/isochrones.js&quot;&gt;&lt;/script&gt;</b>
+			</li>
+		</ul>
+	<li>Télécharger le fichier : <b><a href="./resources/isochrones.js" target="_blank">isochrones.js</a></b><br>
+		&nbsp;&nbsp;&nbsp;et le copier dans le sous-dossier <b>resources</b>
+	</li>
+</ol>
+
+<script>// Définir la projection, la position (center) et l'échelle (zoom) de la carte :
+	map.setView( new ol.View({ projection:'EPSG:2154', center: [553447,6255582], zoom: 6 }) );
+</script>
+</body>
+</html>

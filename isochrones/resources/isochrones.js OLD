@@ -1,0 +1,152 @@
+//*** Charger la definition du Lambert 93 (EPSG:2154) :
+var proj4script= document.createElement("script");
+proj4script.src = "./resources/proj4.js";
+document.head.appendChild(proj4script);
+proj4.defs('EPSG:2154','+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+ol.proj.proj4.register(proj4);
+var lambert93= ol.proj.get('EPSG:2154'); lambert93.setExtent([-378305.81, 6093283.21, 1212610.74, 7186901.68]);
+
+
+var calcIsochrone= false;
+isocControl= function(opt_options){
+  var options= opt_options || {};
+	var buttonStyle= document.createElement('style')
+	document.head.append(buttonStyle)
+	var styles= '.isochrone-control button{width:7em !important; display:inline; border:1px solid #aaa; border-radius:4px !important; cursor:pointer; }';
+	buttonStyle.sheet.insertRule( styles, 0 )
+	var styles= '.isochrone-control button.actif{background-color: #aaa !important; border-color: #111 }';
+	buttonStyle.sheet.insertRule( styles, 0 )
+	
+  var button= document.createElement('button');
+  button.innerHTML= 'isochrone';
+  button.setAttribute("title", "Cliquer pour activer la fonction ; puis cliquer dans la carte sur le point de départ de l'isochrone");
+  //button.className += ' fas fa-ruler ';
+  var this_= this;
+  var handleIsochrone= function(e) {
+    if (!calcIsochrone) {
+			button.classList.add('actif');
+			//button.style.cssText= 'background-color: #aaa !important';			//button.style.border= '1px solid #111';
+			//createHelpTooltip();			createMeasureTooltip();
+			calcIsochrone= true;
+    } else {
+			button.classList.remove('actif');
+			//button.style.backgroundColor= 'initial';			button.style.border= 'initial';
+			calcIsochrone= false;
+			isocSource.clear();
+    }
+  };
+  button.addEventListener('click', handleIsochrone, false);
+  button.addEventListener('touchstart', handleIsochrone, false);
+	
+  var inputTime= document.createElement('input');
+	inputTime.setAttribute("type", "number");
+	inputTime.setAttribute("id", "minutes");
+	inputTime.setAttribute("min", "1");
+	inputTime.setAttribute("max", "600");
+	inputTime.value= 10;
+  inputTime.style.width= '3em';
+  var txtTime= document.createElement('span');
+	txtTime.innerHTML= 'minutes'
+	
+  var element= document.createElement('div');
+  element.className= 'isochrone-control ol-selectable ol-control';
+  element.style.top= '0.5em';
+  element.style.left= '3em';
+  element.appendChild(button);
+  element.appendChild(inputTime);
+  element.appendChild(txtTime);
+
+  ol.control.Control.call( this, { element: element, target: options.target } );
+};
+ol.inherits(isocControl, ol.control.Control);
+var ctrlIsochrone= new isocControl();
+map.addControl(ctrlIsochrone);
+
+
+var monStyle= new ol.style.Style({
+  fill: new ol.style.Fill({ color:'rgba(0,0,255,0.2)' }),
+  stroke: new ol.style.Stroke({ color:'blue', width:2 }),
+  image: new ol.style.Circle({ radius:10,
+    fill:new ol.style.Fill({ color:'orange' }),
+    stroke:new ol.style.Stroke({ color:'red', width:2 })
+  }),
+  text: new ol.style.Text({ font:"bold 20px Arial",
+    placement: 'point', fill: new ol.style.Fill({color:'#900'}),
+    textAlign:"center", offsetY:-10, stroke:new ol.style.Stroke({color:'#fff',width:3})
+  })
+})
+
+var isocSource= new ol.source.Vector({wrapX: false});
+var vector= new ol.layer.Vector({ source: isocSource,
+	style: function(feature){ monStyle.getText().setText(feature.get('nom')); return monStyle; }
+});
+map.addLayer(vector); // map.getLayers().insertAt( 0, vector ); // layersList.push( vector );
+
+
+map.on('singleclick', function(evt){ onSingleClick(evt) });
+
+if(typeof onSingleClick=="function") var onSingleClickOriginal= onSingleClick;
+else var onSingleClickOriginal= function(e){return};
+
+var onSingleClick= function(evt){
+	onSingleClickOriginal(evt);
+  if (!calcIsochrone) return;
+	if( measuring ){ return }
+	if (sketch) {	return }
+		
+	var clicCoord = evt.coordinate;
+	console.log( "clicCoord=" + clicCoord )
+	var minutes= document.getElementById('minutes');
+	if(minutes && minutes.value>0){ var duree= minutes.value * 60; }
+	else{ var duree= 600; }
+	var api_ign= "https://wxs.ign.fr/d37yiu4ttsg1x3j0i1233143/isochrone/isochrone.json?"
+	var params= "location="+clicCoord[0]+","+clicCoord[1]+"&method=Time&time="+duree+"&srs=EPSG:2154&smoothing=true"
+	//console.log( "url= " + api_ign + params )
+  $.ajax({
+    dataType:'html', url: api_ign + params
+  }).done( function(data){
+		var obj= JSON.parse(data); 
+		afficherIsochrone( obj )
+  });
+}
+
+
+function afficherIsochrone( data ){ // Fonction à appeler depuis la page Commande de mission 
+	if( data==undefined ){ alert("Soucis avec la réponse du serveur IGN"); return }
+	if( data.status != 'OK' ){ alert( data.message ); return }
+	geomWKT= data.wktGeometry
+	if( geomWKT=='' ){ alert("Le serveur IGN a renvoyé un isochrone vide"); return }
+	var wkt= new ol.format.WKT()
+  var feat= wkt.readFeature(geomWKT); // Si geomWKT n'est pas un WKT valide -> erreur -> fonction terminée
+  if( ! feat ){ alert("Le serveur IGN a renvoyé un isochrone non valide"); return }
+  isocSource.clear();
+	isocSource.addFeature(feat);
+  dessinWKT= geomWKT;
+	var etendue= feat.getGeometry().getExtent()
+  if(etendue) map.setView( zoomVueSur(etendue) );
+}
+
+// retourne une ol.View zoomee sur la zone fournie en parametre :
+function zoomVueSur( E, elargi ){ // E= ol.Extent : [minx, miny, maxx, maxy]
+  var centre= [ (E[0]+(E[2]-E[0])/2), (E[1]+(E[3]-E[1])/2) ]
+  if( (E[2]-E[0]) < 3000 && (E[3]-E[1]) < 3000 ){
+		//elargi= 3
+		var vue= { projection:lambert93, center:centre, resolution:3 }  //[E[0],E[1]]
+    return new ol.View( vue )
+  }
+	if(map && map.getSize()){
+		var s= map.getSize() // [Largeur,Hauteur] en pixels
+		var L= (E[2]-E[0]) / s[0] //resolution (pixels par metre) adaptee en largeur
+		var H= (E[3]-E[1]) / s[1] //resolution adaptee en hauteur
+		if(L<H) L=H // garde la resolution la plus large pour tout afficher
+		if(elargi==undefined) L= L*1.2; // elargir un peu la vue autour de la zone
+		else  L= L*elargi;
+		if(L<0.5) L=0.5; // resolution minimale: 0.5 pixels par metre
+		var vue= { projection:lambert93, center:centre, resolution:(L) } // resolution:(L*1.2) }
+	}
+  else {
+		var vue= { projection:lambert93, center:centre, resolution:(E[2]-E[0])/300 }
+	}
+	return new ol.View( vue )
+}
+
